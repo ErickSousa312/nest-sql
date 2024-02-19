@@ -8,7 +8,7 @@ export class AppService {
   async atendimentoPorTipoOcorrencia(): Promise<any> {
     const data = await this.knex
       .select('Tipo.TipoDS')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Ocorrencia',
@@ -18,16 +18,22 @@ export class AppService {
       .innerJoin('Motivo', 'Ocorrencia.MotivoID', 'Motivo.MotivoID')
       .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
-      .groupBy('Tipo.TipoDS')
-      .orderBy('Tipo.TipoDS', 'desc');
-    console.log(data);
-    return data;
+      .groupBy('Tipo.TipoDS');
+    const dadosFormatados = data.map((item) => ({
+      TipoDS: item.TipoDS
+        ? item.TipoDS.charAt(0).toUpperCase() +
+          item.TipoDS.slice(1).toLowerCase()
+        : null,
+      Total_Ocorrencias: item.Total_Ocorrencias,
+    }));
+    console.log(dadosFormatados);
+    return dadosFormatados;
   }
 
   async atendimentoPorVeiculo(): Promise<any> {
     const data = await this.knex
       .select('Veiculos.VeiculoDS')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Veiculos',
@@ -41,19 +47,47 @@ export class AppService {
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
       .groupBy('Veiculos.VeiculoDS')
-      .orderBy('Total Ocorrencias', 'desc');
-
+      .orderBy('Total_Ocorrencias', 'desc');
+    data.forEach((item: any) => {
+      item.VeiculoDS = item.VeiculoDS.replace(/\s/g, '');
+      item.VeiculoDS = item.VeiculoDS.replace(/01(?!\d)/g, '1');
+      item.VeiculoDS = item.VeiculoDS.replace(/02(?!\d)/g, '2');
+      item.VeiculoDS = item.VeiculoDS.replace(/03(?!\d)/g, '3');
+      item.VeiculoDS = item.VeiculoDS.replace(/04(?!\d)/g, '4');
+      const hyphenIndex = item.VeiculoDS.indexOf('-');
+      if (hyphenIndex !== -1) {
+        const secondHyphenIndex = item.VeiculoDS.indexOf('-', hyphenIndex + 1);
+        if (secondHyphenIndex !== -1) {
+          const firstPart = item.VeiculoDS.slice(0, secondHyphenIndex).trim();
+          item.VeiculoDS = firstPart;
+        }
+      }
+      item.VeiculoDS = item.VeiculoDS.replace('MARABA', 'MAB');
+      item.VeiculoDS = item.VeiculoDS.replace('PARAUAPEBAS', 'PEB');
+      item.VeiculoDS = item.VeiculoDS.replace('BOMJESUS', 'BJES');
+      item.VeiculoDS = item.VeiculoDS.replace('RONDON', 'RDON');
+      item.VeiculoDS = item.VeiculoDS.replace(/-{2,}/g, '-');
+      item.VeiculoDS = item.VeiculoDS.replace(/\d{4}$/, '');
+    });
     return data;
   }
 
   async atendimentoPorSexo(): Promise<any> {
     const data = await this.knex
       .select('SexoDS')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('Vitimas')
       .leftJoin('TBS_Sexo', 'Vitimas.Sexo', 'TBS_Sexo.SexoCOD')
       .groupBy('SexoDS');
-    return data;
+    const dadosFormatados = data.map((item) => ({
+      SexoDS: item.SexoDS
+        ? item.SexoDS.charAt(0).toUpperCase() +
+          item.SexoDS.slice(1).toLowerCase()
+        : null,
+      Total_Ocorrencias: item.Total_Ocorrencias,
+    }));
+    console.log(dadosFormatados);
+    return dadosFormatados;
   }
 
   async atendimentoPorFaixaEtaria(): Promise<any> {
@@ -74,7 +108,7 @@ export class AppService {
         ELSE 'NÃO IDENTIFICADAS'
         END AS faixa_etaria`),
       )
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('Vitimas')
       .groupBy(
         this.knex.raw(`CASE
@@ -96,13 +130,30 @@ export class AppService {
     return data;
   }
 
-  async AtendimentoPorMotivos(): Promise<any> {
-    // const a = await new Promise((Resolve) =>
-    //   setTimeout(() => Resolve({ erick: 'teste' }), 5000),
-    // );
-    const data = await this.knex
+  async AtendimentoPorMotivos(TipoDS: string | undefined): Promise<any> {
+    let data;
+    console.log(TipoDS);
+    if (!TipoDS || TipoDS == 'undefined') {
+      console.log('entrou');
+      data = await this.knex
+        .select('Tipo.TipoDS', 'Motivo.MotivoDS')
+        .count('*', { as: 'Total_Ocorrencias' })
+        .from('OcorrenciaMovimentacao')
+        .innerJoin(
+          'Ocorrencia',
+          'OcorrenciaMovimentacao.OcorrenciaID',
+          'Ocorrencia.OcorrenciaID',
+        )
+        .innerJoin('Motivo', 'Ocorrencia.MotivoID', ' Motivo.MotivoID')
+        .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
+        .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+        .groupBy('Tipo.TipoDS', 'Motivo.MotivoDS')
+        .orderBy('Tipo.TipoDS', 'desc');
+      return data;
+    }
+    data = await this.knex
       .select('Tipo.TipoDS', 'Motivo.MotivoDS')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Ocorrencia',
@@ -112,8 +163,11 @@ export class AppService {
       .innerJoin('Motivo', 'Ocorrencia.MotivoID', ' Motivo.MotivoID')
       .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .andWhere('Tipo.TipoDS', '=', TipoDS)
       .groupBy('Tipo.TipoDS', 'Motivo.MotivoDS')
       .orderBy('Tipo.TipoDS', 'desc');
+    //   setTimeout(() => Resolve({ erick: 'teste' }), 5000),
+    // );
 
     return data;
   }
@@ -128,7 +182,7 @@ export class AppService {
       WHEN DATEPART(HOUR, DtHr) BETWEEN 1 AND 6 THEN '01:00 AS 06:00H'
       END AS PeriodoDia`),
       )
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Ocorrencia',
@@ -151,7 +205,7 @@ export class AppService {
   async TempoResposta(): Promise<any> {
     const data = this.knex
       .select('TempoResposta')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from(
         this.knex.raw(` (
         SELECT
@@ -187,7 +241,7 @@ export class AppService {
   async TempoNoLocal(): Promise<any> {
     const data = await this.knex
       .select('TempoNoLocal')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from(
         this.knex.raw(`(
         SELECT
@@ -223,7 +277,7 @@ export class AppService {
   async TempoSaidaLocal(): Promise<any> {
     const data = await this.knex
       .select('TempoSaidaLocal')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from(
         this.knex.raw(`(
         SELECT
@@ -422,7 +476,7 @@ export class AppService {
   async AtendimentosPorBairo(): Promise<any> {
     const data = this.knex
       .select('Ocorrencia.Bairro')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Ocorrencia',
@@ -431,14 +485,14 @@ export class AppService {
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
       .groupBy('Ocorrencia.Bairro')
-      .orderBy('Total Ocorrencias', 'desc');
+      .orderBy('Total_Ocorrencias', 'desc');
     return data;
   }
 
   async CancelamentoAtendimento(): Promise<any> {
     const data = await this.knex
       .select('CancelamentoTP.CancelDS')
-      .count('*', { as: 'Total Ocorrencias' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('FORMEQUIPE_SolicitacaoVeiculo')
       .innerJoin(
         'Ocorrencia',
@@ -451,7 +505,7 @@ export class AppService {
         'CancelamentoTP.CancelTP',
       )
       .groupBy('CancelamentoTP.CancelDS')
-      .orderBy('Total Ocorrencias', 'desc');
+      .orderBy('Total_Ocorrencias', 'desc');
     return data;
   }
 

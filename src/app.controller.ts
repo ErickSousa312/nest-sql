@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller('api/v1/')
@@ -26,8 +26,9 @@ export class AppController {
   }
 
   @Get('atendimentoMotivosOcorrencia')
-  getAtendimentoPorMotivosOcorrencia() {
-    return this.appService.AtendimentoPorMotivos();
+  getAtendimentoPorMotivosOcorrencia(@Query() params: any) {
+    console.log(params.nameTipo);
+    return this.appService.AtendimentoPorMotivos(params.nameTipo);
   }
 
   @Get('atendimentoChamadasDiaNoite')
