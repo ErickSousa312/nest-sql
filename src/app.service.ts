@@ -148,7 +148,7 @@ export class AppService {
         .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
         .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
         .groupBy('Tipo.TipoDS', 'Motivo.MotivoDS')
-        .orderBy('Tipo.TipoDS', 'desc');
+        .orderBy('Total_Ocorrencias', 'desc');
       return data;
     }
     data = await this.knex
