@@ -16,13 +16,16 @@ export class AppController {
   }
 
   @Get('atendimentosSexo')
-  getAtendimentosSexo() {
-    return this.appService.atendimentoPorSexo();
+  getAtendimentosSexo(@Query() params: any) {
+    // console.log(params.mes);
+    console.log(params);
+    return this.appService.atendimentoPorSexo(params.mes, params.ano);
   }
 
   @Get('atendimentoFaixaEtaria')
-  getAtendimentoFaixaEtaria() {
-    return this.appService.atendimentoPorFaixaEtaria();
+  getAtendimentoFaixaEtaria(@Query() params: any) {
+    console.log(params.ano);
+    return this.appService.atendimentoPorFaixaEtaria(params.mes, params.ano);
   }
 
   @Get('atendimentoMotivosOcorrencia')
@@ -61,7 +64,7 @@ export class AppController {
     return this.appService.Transferencias();
   }
 
-  @Get('obito')
+  @Get('obitos')
   getObito() {
     return this.appService.Obito();
   }

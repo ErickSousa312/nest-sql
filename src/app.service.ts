@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Knex } from 'knex';
 import { InjectConnection } from 'nest-knexjs';
+import { whereClauses } from './functions/whereClauses';
 @Injectable()
 export class AppService {
   constructor(@InjectConnection() private readonly knex: Knex) {}
@@ -72,13 +73,25 @@ export class AppService {
     return data;
   }
 
-  async atendimentoPorSexo(): Promise<any> {
+  async atendimentoPorSexo(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
+
     const data = await this.knex
-      .select('SexoDS')
+      .select('TBS_Sexo.SexoDS')
       .count('*', { as: 'Total_Ocorrencias' })
       .from('Vitimas')
       .leftJoin('TBS_Sexo', 'Vitimas.Sexo', 'TBS_Sexo.SexoCOD')
-      .groupBy('SexoDS');
+      .leftJoin('Ocorrencia', 'Vitimas.OcorrenciaID', 'Ocorrencia.OcorrenciaID')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
+      .groupBy('TBS_Sexo.SexoDS');
+
     const dadosFormatados = data.map((item) => ({
       SexoDS: item.SexoDS
         ? item.SexoDS.charAt(0).toUpperCase() +
@@ -90,7 +103,10 @@ export class AppService {
     return dadosFormatados;
   }
 
-  async atendimentoPorFaixaEtaria(): Promise<any> {
+  async atendimentoPorFaixaEtaria(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
     const data = await this.knex
       .select(
         this.knex.raw(`CASE
@@ -110,6 +126,13 @@ export class AppService {
       )
       .count('*', { as: 'Total_Ocorrencias' })
       .from('Vitimas')
+      .innerJoin(
+        'Ocorrencia',
+        'Vitimas.OcorrenciaID',
+        'Ocorrencia.OcorrenciaID',
+      )
+      .whereRaw(`YEAR(Ocorrencia.DtHr) = ${ano}`)
+      .whereRaw(`MONTH(Ocorrencia.DtHr) = ${mes}`)
       .groupBy(
         this.knex.raw(`CASE
         WHEN idade < 1 THEN 'MENOR DE ANO'
@@ -313,12 +336,12 @@ export class AppService {
   async DestinoPaciente(): Promise<any> {
     const data = await this.knex
       .select('UnidadesDestino.UnidadeDS')
-      .count('*', { as: 'Total Atendimento' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('HISTORICO_DECISAO_GESTORA')
       .innerJoin(
-        'UnidadesDestino',
-        'HISTORICO_DECISAO_GESTORA.DESTINOID',
-        'UnidadesDestino.UnidadeCOD',
+        'Ocorrencia',
+        'HISTORICO_DECISAO_GESTORA.OcorrenciaID',
+        'Ocorrencia.OcorrenciaID',
       )
       .innerJoin(
         'UnidadesDestino',
@@ -327,14 +350,14 @@ export class AppService {
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
       .groupBy('UnidadesDestino.UnidadeDS')
-      .orderBy('Total Atendimento', 'desc');
+      .orderBy('Total_Ocorrencias', 'desc');
     return data;
   }
 
   async Transferencias(): Promise<any> {
     const data = await this.knex
       .select('Tipo.TipoDS')
-      .count('*', { as: 'Total Atendimento' })
+      .count('*', { as: 'Total_Ocorrencias' })
       .from('OcorrenciaMovimentacao')
       .innerJoin(
         'Ocorrencia',
