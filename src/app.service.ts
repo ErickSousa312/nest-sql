@@ -6,7 +6,11 @@ import { whereClauses } from './functions/whereClauses';
 export class AppService {
   constructor(@InjectConnection() private readonly knex: Knex) {}
 
-  async atendimentoPorTipoOcorrencia(): Promise<any> {
+  async atendimentoPorTipoOcorrencia(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('Tipo.TipoDS')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -18,6 +22,11 @@ export class AppService {
       )
       .innerJoin('Motivo', 'Ocorrencia.MotivoID', 'Motivo.MotivoID')
       .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
       .groupBy('Tipo.TipoDS');
     const dadosFormatados = data.map((item) => ({
@@ -27,11 +36,14 @@ export class AppService {
         : null,
       Total_Ocorrencias: item.Total_Ocorrencias,
     }));
-    console.log(dadosFormatados);
     return dadosFormatados;
   }
 
-  async atendimentoPorVeiculo(): Promise<any> {
+  async atendimentoPorVeiculo(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('Veiculos.VeiculoDS')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -46,6 +58,11 @@ export class AppService {
         'OcorrenciaMovimentacao.OcorrenciaID',
         'Ocorrencia.OcorrenciaID',
       )
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
       .groupBy('Veiculos.VeiculoDS')
       .orderBy('Total_Ocorrencias', 'desc');
@@ -84,7 +101,16 @@ export class AppService {
       .count('*', { as: 'Total_Ocorrencias' })
       .from('Vitimas')
       .leftJoin('TBS_Sexo', 'Vitimas.Sexo', 'TBS_Sexo.SexoCOD')
-      .leftJoin('Ocorrencia', 'Vitimas.OcorrenciaID', 'Ocorrencia.OcorrenciaID')
+      .innerJoin(
+        'Ocorrencia',
+        'Vitimas.OcorrenciaID',
+        'Ocorrencia.OcorrenciaID',
+      )
+      .innerJoin(
+        'OcorrenciaMovimentacao',
+        'OcorrenciaMovimentacao.OcorrenciaID',
+        'Ocorrencia.OcorrenciaID',
+      )
       .modify((queryBuilder) => {
         if (whereClauses.length > 0) {
           queryBuilder.whereRaw(whereS.join(' AND '), bind);
@@ -107,6 +133,7 @@ export class AppService {
     mes: string | undefined,
     ano: string | undefined,
   ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select(
         this.knex.raw(`CASE
@@ -131,8 +158,16 @@ export class AppService {
         'Vitimas.OcorrenciaID',
         'Ocorrencia.OcorrenciaID',
       )
-      .whereRaw(`YEAR(Ocorrencia.DtHr) = ${ano}`)
-      .whereRaw(`MONTH(Ocorrencia.DtHr) = ${mes}`)
+      .innerJoin(
+        'OcorrenciaMovimentacao',
+        'OcorrenciaMovimentacao.OcorrenciaID',
+        'Ocorrencia.OcorrenciaID',
+      )
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .groupBy(
         this.knex.raw(`CASE
         WHEN idade < 1 THEN 'MENOR DE ANO'
@@ -153,9 +188,13 @@ export class AppService {
     return data;
   }
 
-  async AtendimentoPorMotivos(TipoDS: string | undefined): Promise<any> {
+  async AtendimentoPorMotivos(
+    TipoDS: string | undefined,
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
     let data;
-    console.log(TipoDS);
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     if (!TipoDS || TipoDS == 'undefined') {
       console.log('entrou');
       data = await this.knex
@@ -169,6 +208,11 @@ export class AppService {
         )
         .innerJoin('Motivo', 'Ocorrencia.MotivoID', ' Motivo.MotivoID')
         .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
+        .modify((queryBuilder) => {
+          if (whereClauses.length > 0) {
+            queryBuilder.whereRaw(whereS.join(' AND '), bind);
+          }
+        })
         .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
         .groupBy('Tipo.TipoDS', 'Motivo.MotivoDS')
         .orderBy('Total_Ocorrencias', 'desc');
@@ -186,16 +230,23 @@ export class AppService {
       .innerJoin('Motivo', 'Ocorrencia.MotivoID', ' Motivo.MotivoID')
       .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .andWhere('Tipo.TipoDS', '=', TipoDS)
       .groupBy('Tipo.TipoDS', 'Motivo.MotivoDS')
       .orderBy('Tipo.TipoDS', 'desc');
-    //   setTimeout(() => Resolve({ erick: 'teste' }), 5000),
-    // );
 
     return data;
   }
 
-  async AtendimentoChamadasDiaNoite(): Promise<any> {
+  async AtendimentoChamadasDiaNoite(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select(
         this.knex.raw(`CASE
@@ -213,6 +264,11 @@ export class AppService {
         'Ocorrencia.OcorrenciaID',
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .groupBy(
         this.knex.raw(`CASE
         WHEN DATEPART(HOUR, DtHr) BETWEEN 7 AND 12 THEN '07:00 AS 12:00H'
@@ -225,14 +281,20 @@ export class AppService {
     return data;
   }
 
-  async TempoResposta(): Promise<any> {
+  async TempoResposta(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
+
     const data = this.knex
       .select('TempoResposta')
       .count('*', { as: 'Total_Ocorrencias' })
       .from(
-        this.knex.raw(` (
-        SELECT
-        CASE
+        this.knex.raw(
+          `(
+    SELECT
+      CASE
         WHEN DATEDIFF(MINUTE, DtHr, ChegadaLocalDT) BETWEEN 0 AND 5 THEN '0 min a 5 min'
         WHEN DATEDIFF(MINUTE, DtHr, ChegadaLocalDT) BETWEEN 6 AND 10 THEN '6 min a 10 min'
         WHEN DATEDIFF(MINUTE, DtHr, ChegadaLocalDT) BETWEEN 11 AND 15 THEN '11 min a 15 min'
@@ -241,32 +303,40 @@ export class AppService {
         WHEN DATEDIFF(MINUTE, DtHr, ChegadaLocalDT) BETWEEN 26 AND 30 THEN '26 min a 30 min'
         WHEN DATEDIFF(MINUTE, DtHr, ChegadaLocalDT) > 30 THEN 'Mais de 30 min'
         ELSE 'Não identificado'
-        END AS TempoResposta
-        FROM OcorrenciaMovimentacao
-        INNER JOIN Ocorrencia ON OcorrenciaMovimentacao.OcorrenciaID = Ocorrencia.OcorrenciaID
-        INNER JOIN Motivo ON Ocorrencia.MotivoID = Motivo.MotivoID
-        WHERE OcorrenciaFinalDT <> '' AND SaidaLocalDT <> '' AND ChegadaDestinoDT <> ''
-        ) AS Subquery`),
+      END AS TempoResposta
+    FROM OcorrenciaMovimentacao
+    INNER JOIN Ocorrencia ON OcorrenciaMovimentacao.OcorrenciaID = Ocorrencia.OcorrenciaID
+    INNER JOIN Motivo ON Ocorrencia.MotivoID = Motivo.MotivoID
+    WHERE OcorrenciaFinalDT <> '' AND SaidaLocalDT <> '' AND ChegadaDestinoDT <> ''
+    ${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
+  ) AS Subquery`,
+          bind,
+        ),
       )
       .groupBy('TempoResposta').orderByRaw(`CASE
-      WHEN TempoResposta = '0 min a 5 min' THEN 1
-      WHEN TempoResposta = '6 min a 10 min' THEN 2
-      WHEN TempoResposta = '11 min a 15 min' THEN 3
-      WHEN TempoResposta = '16 min a 20 min' THEN 4
-      WHEN TempoResposta = '21 min a 25 min' THEN 5
-      WHEN TempoResposta = '26 min a 30 min' THEN 6
-      WHEN TempoResposta = 'Mais de 30 min' THEN 7
-      ELSE 8
-      END;`);
+  WHEN TempoResposta = '0 min a 5 min' THEN 1
+  WHEN TempoResposta = '6 min a 10 min' THEN 2
+  WHEN TempoResposta = '11 min a 15 min' THEN 3
+  WHEN TempoResposta = '16 min a 20 min' THEN 4
+  WHEN TempoResposta = '21 min a 25 min' THEN 5
+  WHEN TempoResposta = '26 min a 30 min' THEN 6
+  WHEN TempoResposta = 'Mais de 30 min' THEN 7
+  ELSE 8
+END`);
     return data;
   }
 
-  async TempoNoLocal(): Promise<any> {
+  async TempoNoLocal(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('TempoNoLocal')
       .count('*', { as: 'Total_Ocorrencias' })
       .from(
-        this.knex.raw(`(
+        this.knex.raw(
+          `(
         SELECT
         CASE
         WHEN DATEDIFF(MINUTE, ChegadaLocalDT, SaidaLocalDT) BETWEEN 0 AND 5 THEN '0 min a 5 min'
@@ -282,7 +352,10 @@ export class AppService {
         INNER JOIN Ocorrencia ON OcorrenciaMovimentacao.OcorrenciaID = Ocorrencia.OcorrenciaID
         INNER JOIN Motivo ON Ocorrencia.MotivoID = Motivo.MotivoID
         WHERE OcorrenciaFinalDT <> '' AND SaidaLocalDT <> '' AND ChegadaDestinoDT <> ''
-        ) AS Subquery`),
+        ${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
+        ) AS Subquery`,
+          bind,
+        ),
       )
       .groupBy('TempoNoLocal').orderByRaw(`CASE
       WHEN TempoNoLocal = '0 min a 5 min' THEN 1
@@ -297,12 +370,17 @@ export class AppService {
     return data;
   }
 
-  async TempoSaidaLocal(): Promise<any> {
+  async TempoSaidaLocal(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('TempoSaidaLocal')
       .count('*', { as: 'Total_Ocorrencias' })
       .from(
-        this.knex.raw(`(
+        this.knex.raw(
+          `(
         SELECT
         CASE
         WHEN DATEDIFF(MINUTE, SaidaLocalDT, ChegadaDestinoDT) BETWEEN 0 AND 5 THEN '0 min a 5 min'
@@ -318,7 +396,10 @@ export class AppService {
         INNER JOIN Ocorrencia ON OcorrenciaMovimentacao.OcorrenciaID = Ocorrencia.OcorrenciaID
         INNER JOIN Motivo ON Ocorrencia.MotivoID = Motivo.MotivoID
         WHERE OcorrenciaFinalDT <> '' AND SaidaLocalDT <> '' AND ChegadaDestinoDT <> ''
-        ) AS Subquery`),
+        ${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
+        ) AS Subquery`,
+          bind,
+        ),
       )
       .groupBy('TempoSaidaLocal').orderByRaw(`CASE
       WHEN TempoSaidaLocal = '0 min a 5 min' THEN 1
@@ -333,7 +414,11 @@ export class AppService {
     return data;
   }
 
-  async DestinoPaciente(): Promise<any> {
+  async DestinoPaciente(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('UnidadesDestino.UnidadeDS')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -349,12 +434,21 @@ export class AppService {
         'UnidadesDestino.UnidadeCOD',
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .groupBy('UnidadesDestino.UnidadeDS')
       .orderBy('Total_Ocorrencias', 'desc');
     return data;
   }
 
-  async Transferencias(): Promise<any> {
+  async Transferencias(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('Tipo.TipoDS')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -368,14 +462,25 @@ export class AppService {
       .innerJoin('Tipo', 'Motivo.TipoID', 'Tipo.TipoID')
       .innerJoin('LigacaoTP', 'Ocorrencia.LigacaoTPID', 'LigacaoTP.LigacaoTPID')
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .andWhere('LigacaoTP.LigacaoTPDS', '=', 'TRANSFERÊNCIA')
       .groupBy('Tipo.TipoDS')
       .orderBy('TipoDS ', 'desc');
     return data;
   }
 
-  async Obito(): Promise<any> {
-    const data = this.knex.raw(`SELECT
+  async Obito(mes: string | undefined, ano: string | undefined): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
+    let bindTriplicado = [];
+    for (let i = 0; i < 3; i++) {
+      bindTriplicado = bindTriplicado.concat(bind);
+    }
+    const data = this.knex.raw(
+      `SELECT
     Obito,
     QuantidadeObito
     FROM
@@ -418,7 +523,7 @@ export class AppService {
     'COLISÃO MOTO X CAMINHÃO',
     'COLISÃO MOTO X MOTO',
     'QUEDA DE MOTO'
-    )
+    )${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
     ) AS Subconsulta1
     UNION ALL
     SELECT
@@ -443,7 +548,7 @@ export class AppService {
     Intercorrencias.IntercorrenciaID IN (18, 16, 19)
     AND Tipo.TipoID IN (
     17
-    )
+    )${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
     ) AS Subconsulta2
     UNION ALL
     SELECT
@@ -491,12 +596,18 @@ export class AppService {
     'COLISÃO MOTO X CAMINHÃO',
     'COLISÃO MOTO X MOTO',
     'QUEDA DE MOTO'
-    )
-    ) AS Subconsulta3`);
+    )${whereS.length > 0 ? 'AND ' + whereS.join(' AND ') : ''}
+    ) AS Subconsulta3`,
+      bindTriplicado,
+    );
     return data;
   }
 
-  async AtendimentosPorBairo(): Promise<any> {
+  async AtendimentosPorBairo(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = this.knex
       .select('Ocorrencia.Bairro')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -507,12 +618,21 @@ export class AppService {
         'Ocorrencia.OcorrenciaID',
       )
       .where('Ocorrencia.OcorrenciaFinalDT', '<>', '')
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .groupBy('Ocorrencia.Bairro')
       .orderBy('Total_Ocorrencias', 'desc');
     return data;
   }
 
-  async CancelamentoAtendimento(): Promise<any> {
+  async CancelamentoAtendimento(
+    mes: string | undefined,
+    ano: string | undefined,
+  ): Promise<any> {
+    const { whereClauses: whereS, bindings: bind } = whereClauses(ano, mes);
     const data = await this.knex
       .select('CancelamentoTP.CancelDS')
       .count('*', { as: 'Total_Ocorrencias' })
@@ -527,6 +647,11 @@ export class AppService {
         'FORMEQUIPE_SolicitacaoVeiculo.CancelTP',
         'CancelamentoTP.CancelTP',
       )
+      .modify((queryBuilder) => {
+        if (whereClauses.length > 0) {
+          queryBuilder.whereRaw(whereS.join(' AND '), bind);
+        }
+      })
       .groupBy('CancelamentoTP.CancelDS')
       .orderBy('Total_Ocorrencias', 'desc');
     return data;

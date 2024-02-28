@@ -6,13 +6,13 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get('atendimentoTipoOcorrencia')
-  getAtendimentosTipos() {
-    return this.appService.atendimentoPorTipoOcorrencia();
+  getAtendimentosTipos(@Query() params: any) {
+    return this.appService.atendimentoPorTipoOcorrencia(params.mes, params.ano);
   }
 
   @Get('atendimentoVeiculo')
-  getAtendimentosVeiculos() {
-    return this.appService.atendimentoPorVeiculo();
+  getAtendimentosVeiculos(@Query() params: any) {
+    return this.appService.atendimentoPorVeiculo(params.mes, params.ano);
   }
 
   @Get('atendimentosSexo')
@@ -31,50 +31,54 @@ export class AppController {
   @Get('atendimentoMotivosOcorrencia')
   getAtendimentoPorMotivosOcorrencia(@Query() params: any) {
     console.log(params.nameTipo);
-    return this.appService.AtendimentoPorMotivos(params.nameTipo);
+    return this.appService.AtendimentoPorMotivos(
+      params.nameTipo,
+      params.mes,
+      params.ano,
+    );
   }
 
   @Get('atendimentoChamadasDiaNoite')
-  getAtendimentoChamadasDiaNoite() {
-    return this.appService.AtendimentoChamadasDiaNoite();
+  getAtendimentoChamadasDiaNoite(@Query() params: any) {
+    return this.appService.AtendimentoChamadasDiaNoite(params.mes, params.ano);
   }
 
   @Get('tempoResposta')
-  getTempoResposta() {
-    return this.appService.TempoResposta();
+  getTempoResposta(@Query() params: any) {
+    return this.appService.TempoResposta(params.mes, params.ano);
   }
 
   @Get('tempoDecorridoLocal')
-  getTempoLocal() {
-    return this.appService.TempoNoLocal();
+  getTempoLocal(@Query() params: any) {
+    return this.appService.TempoNoLocal(params.mes, params.ano);
   }
 
   @Get('tempoSaidaLocal')
-  getTempoSaidaLocal() {
-    return this.appService.TempoSaidaLocal();
+  getTempoSaidaLocal(@Query() params: any) {
+    return this.appService.TempoSaidaLocal(params.mes, params.ano);
   }
 
   @Get('destinoPaciente')
-  getDestinoPaciente() {
-    return this.appService.DestinoPaciente();
+  getDestinoPaciente(@Query() params: any) {
+    return this.appService.DestinoPaciente(params.mes, params.ano);
   }
 
   @Get('transferencias')
-  getTransferencias() {
-    return this.appService.Transferencias();
+  getTransferencias(@Query() params: any) {
+    return this.appService.Transferencias(params.mes, params.ano);
   }
 
   @Get('obitos')
-  getObito() {
-    return this.appService.Obito();
+  getObito(@Query() params: any) {
+    return this.appService.Obito(params.mes, params.ano);
   }
   @Get('atendimentosPorBairo')
-  getAtendimentosPorBairo() {
-    return this.appService.AtendimentosPorBairo();
+  getAtendimentosPorBairo(@Query() params: any) {
+    return this.appService.AtendimentosPorBairo(params.mes, params.ano);
   }
   @Get('cancelamentoAtendimento')
-  getCancelamentoAtendimento() {
-    return this.appService.CancelamentoAtendimento();
+  getCancelamentoAtendimento(@Query() params: any) {
+    return this.appService.CancelamentoAtendimento(params.mes, params.ano);
   }
 
   @Get()
